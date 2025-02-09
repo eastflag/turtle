@@ -1253,6 +1253,7 @@ MonoBehaviour:
   _goal: {fileID: 1056024581}
   _moveSpeed: 1.5
   _rotationSpeed: 180
+  _ground: {fileID: 1384316132}
 --- !u!114 &1750224055
 MonoBehaviour:
   m_ObjectHideFlags: 0

@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using Unity.MLAgents;
 using Unity.MLAgents.Actuators;
 using Unity.MLAgents.Sensors;
@@ -10,11 +11,16 @@ public class TurtleAgent : Agent
     [SerializeField] private Transform _goal;
     [SerializeField] private float _moveSpeed = 1.5f;
     [SerializeField] private float _rotationSpeed = 180f;
+    [SerializeField] private GameObject _ground;
 
     private Renderer _renderer;
+    private Renderer _groundRenderer;
+    private Material _groundMaterial;
 
     private int _currentEpisode = 0;
     private float _cumulativeReward = 0f;
+    
+    StatsRecorder m_statsRecorder;
     
     public override void Initialize()
     {
@@ -22,17 +28,24 @@ public class TurtleAgent : Agent
         
         _renderer = GetComponent<Renderer>();
         _currentEpisode = 0;
+
+        _groundRenderer = _ground.GetComponent<Renderer>();
+        _groundMaterial = _groundRenderer.material;
+        _groundMaterial.color = Color.gray;
+
+        m_statsRecorder = Academy.Instance.StatsRecorder;
     }
 
     public override void OnEpisodeBegin()
     {
-        Debug.Log("OnEpisodeBegin()");
-
         _currentEpisode++;
         _cumulativeReward = 0;
         _renderer.material.color = Color.blue;
 
         SpawnObjects();
+        
+        m_statsRecorder.Add("Goal/Correct", 0, StatAggregationMethod.Sum);
+        m_statsRecorder.Add("Goal/Wrong", 0, StatAggregationMethod.Sum);
     }
 
     private void SpawnObjects()
@@ -77,8 +90,6 @@ public class TurtleAgent : Agent
 
     public override void OnActionReceived(ActionBuffers actions)
     {
-        Debug.Log(actions.DiscreteActions[0]);
-        
         // Move the agent using the action
         MoveAgent(actions.DiscreteActions);
         
@@ -126,6 +137,11 @@ public class TurtleAgent : Agent
         _cumulativeReward = GetCumulativeReward();
         
         EndEpisode();
+        
+        // Swap ground material for a bit to indicate we scored.
+        StartCoroutine(GoalScoredSwapGroundMaterial(Color.green, 0.5f));
+        
+        m_statsRecorder.Add("Goal/Correct", 1, StatAggregationMethod.Sum);
     }
     
     private void WallReached()
@@ -135,5 +151,17 @@ public class TurtleAgent : Agent
         _cumulativeReward = GetCumulativeReward();
         
         EndEpisode();
+        
+        // Swap ground material for a bit to indicate we scored.
+        StartCoroutine(GoalScoredSwapGroundMaterial(Color.red, 0.5f));
+        
+        m_statsRecorder.Add("Goal/Wrong", 1, StatAggregationMethod.Sum);
+    }
+    
+    IEnumerator GoalScoredSwapGroundMaterial(Color color, float time)
+    {
+        _groundRenderer.material.color = color;
+        yield return new WaitForSeconds(time); // Wait for 2 sec
+        _groundRenderer.material.color = Color.gray;
     }
 }
